@@ -6,24 +6,31 @@ import seaborn as sb
 # --- Load Data ---
 df = pd.read_csv("Stocks_2025.csv")
 df = df.drop('Unnamed: 0', axis=1)
+
+# --- Ensure 'Date' column is parsed correctly ---
+df["Date"] = pd.to_datetime(df["Date"], errors='coerce')  # Fix invalid date formats
+
+# --- Drop rows where Date could not be parsed ---
+df = df.dropna(subset=["Date"])
+
+# --- Clean & calculate moving averages ---
 df["SMA50"] = df["Close"].rolling(window=50, min_periods=1).mean()
 df["SMA200"] = df["Close"].rolling(window=200, min_periods=1).mean()
-df["Date"] = pd.to_datetime(df["Date"])
 df["Stock"] = df["Stock"].replace(" ", " ", regex=True)
 
-# --- Streamlit App Title ---
+# --- Streamlit UI ---
 st.title("📈 Nifty Stocks Analysis Dashboard")
 
 # --- Sidebar Filters ---
 st.sidebar.header("Filter Options")
-categories = df["Category"].unique()
-selected_category = st.sidebar.selectbox("Select Category", categories)
+categories = df["Category"].dropna().unique()
+selected_category = st.sidebar.selectbox("Select Category", sorted(categories))
 
 filtered_df = df[df["Category"] == selected_category]
-stocks = filtered_df["Stock"].unique()
-selected_stock = st.sidebar.selectbox("Select Stock", stocks)
+stocks = filtered_df["Stock"].dropna().unique()
+selected_stock = st.sidebar.selectbox("Select Stock", sorted(stocks))
 
-# --- Filter Data by Stock ---
+# --- Filter Data ---
 stock_data = filtered_df[filtered_df["Stock"] == selected_stock]
 
 # --- Display Selected Info ---
@@ -42,6 +49,7 @@ plt.ylabel("Price")
 plt.legend()
 st.pyplot(fig)
 
-# --- Optional: Show Data Table ---
+# --- Optional Data Table ---
 with st.expander("🔍 View Raw Data"):
     st.dataframe(stock_data)
+
